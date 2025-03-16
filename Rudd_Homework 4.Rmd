@@ -1,0 +1,190 @@
+---
+title: "Homework 4"
+output: word_document
+date: "2025-03-10"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Question 1: Does mistletoe infection affect seedling density?
+
+Q1a) Fit a glm assessing evidence for the following hypothesis: Seedling density is increased beneath trees experiencing mistletoe infection.
+Describe the rationale you used in selecting a glm structure and probability distribution. Calculate model fit using MAE.
+
+#read in packages
+```{r packages}
+library(MASS) #for negative binomial
+library(performance) #for checking dispersion
+library(marginaleffects) 
+library(modelr)
+library(ggplot2) #for plots
+```
+
+```{r pressure, echo=FALSE}
+mistletoe <- read.csv("mistletoes.csv") #read data into r
+head(mistletoe) #check data
+```
+
+```{r glm}
+#perform poisson glm looking at treatment effect on seedling abundance
+mod <- glm(Seedlings~Treatment, data=mistletoe,
+           family = poisson(link = "log"))
+```
+
+```{r overdispersion}
+#since there is only one parameter (lambda) in a Poisson distribution, we want to check for overdispersion. 
+mean(mistletoe$Seedlings)
+var(mistletoe$Seedlings)
+#mean and variance are very different, poisson is likely not a good fit for our data
+
+#further check over dispersion with over dispersion test
+check_overdispersion(mod)
+#overdispersion detected so I will instead proceed with a negative binomial
+```
+
+```{r negative binom}
+#fit a negative binom instead of Poisson because of overdispersion
+mod.nbin <-glm.nb(Seedlings~Treatment, data=mistletoe) 
+```
+Describe the rationale you used in selecting a glm structure and probability distribution: 
+I chose a negative binomial glm because this glm works with count data that is bounded by zero, a Poisson can also be used with this type of data, but we had overdispersion, our mean and variance were very different from eachother, so the Poisson was not a good fit. The negative binom is a glm that has two parameters (mean rate and dispersion) and allows us to detect data that might fall in the tails of our distribution. This is different than the Poisson which has one parameter: lamda, where the mean and variance are assumed to be equal. If they are not equal the Poisson is not a good fit, like our case here. The negative binom uses a log link because we have positive and bounded data at zero and this log link helps keep our predicted data positive.
+
+Calculate model fit using MAE
+```{r mae}
+#calculate model fit using mae
+performance::mae(mod.nbin)
+#we have a high value for mae:145.841, which tells us that on average our predicted values of seedling abundance are off by 145.841 units. This is high and likely indicates that our model is not doing a great job at fitting our data.
+```
+
+Q1b) Use visual (e.g. a marginal effects plot) and written (e.g. effect sizes on scale of response) approaches to interpret the results of your model.
+
+```{r interpretting effects}
+#report summary table and effects for negative binom
+summary(mod.nbin) #not in scale of response variable
+confint(mod.nbin) #not in scale of response variable
+
+#to get our estimates from our summary table out of log scale we need to use the function exp()
+exp(5.7308) #number of seedlings in parasitized treatments
+# 308 seedlings found in parasitized treatments
+exp(5.7308+ (-3.1575)) #number of seedlings in unparasitized treatments relative to parasitized treaments
+#13.10 seedlings found in unparasitized treaments
+
+#we can also use the predictions functions to get these same values
+predictions(mod.nbin,  newdata=data.frame(Treatment=c("parasitized", "unparasitized"),
+                                          Seedlings=mean(mistletoe$Seedlings)))
+#seedling abundance unparasitized = 13.1, seedling abundance parasitized = 308.2
+#Parasitized trees had higher seedling abundance of 308 seedlings, than unparasitized trees which had an abundance of 13.1 seedlings.
+
+#visualize this with predictions plot
+plot_predictions(mod.nbin, condition="Treatment")
+
+#use marginal effects package to look at seed abundance under our different treatments
+marginaleffects::comparisons(mod.nbin, condition="Treatment", newdata=data.frame(Treatment=c("parasitized")))
+#The difference between seedling abundance in parasitized and unparasitized areas is 295 seedlings. Parasitized areas have 295 more seedlings than unparasitized areas.
+
+#Does mistletoe infection alter seedling density? How much does seedling recruitment differ beneath parasitized and unparasitized trees? Explain which elements of your glm results informed your conclusions and annotate the steps you needed to take to interpret your parameters.
+
+#Yes mistletoe infection alters seedling density (p<2e-16, C.I.: -3.6, -2.6), there is a significant effect of mistletoe infection on seedling density. Using a negative binom, seedling recruitment was higher under parasitized trees than uparasitized trees, with a difference of 295 seedlings between the two treatments. Unparasitized tree plots had approximately 308 seedlings, while parasitized tree plots had approximately 13 seedlings. I used the summary(), confint(), and prediction functions from the marginal effects package to interpret the effect of treatment on seedling density. I checked model fit using MAE, which was high (145), potentially indicating that our model is doing a poor job at predicting our actual values and that other variables may be biasing our results.
+
+```
+Q1C: During the course of this study, 2012 was an atypically rainy year, compared to 2011. Fit an additional glm that quantifies how the effect of mistletoe differs between the two years in this study.
+
+```{r interaction}
+#perform negative binom glm and include year as an interaction term
+mod.nbin2 <-glm.nb(Seedlings~Treatment*Year, data=mistletoe)
+summary(mod.nbin2) #in logs space, need to transform out of logs space
+#our interaction tells us how much the effect of treatment changes when we include year 
+confint(mod.nbin2)
+predictions(mod.nbin2, newdata=data.frame(Treatment=c("parasitized", "unparasitized"),
+                                         Year=c(2011)))
+
+predictions(mod.nbin2, newdata=data.frame(Treatment=c("parasitized", "unparasitized"),
+                                         Year=c(2012)))
+
+#Write ~2 new sentences that summarize the results of the new model and their biological implications:
+#There was not a significant interaction between seedling abundance in our two treatments across years (p=0.0599, C.I. = 0, 1.8). The p-value is very close to 0.05, and we assume no statistical significance, but there may be some biological relevance to our estimate. There was an increase in seedling abundance by approximately 1.822 times (exp(0.600)) across years, and our interaction indicates that across years there was a greater affect of year by 2.48 times (exp(0.89)) in seedling abundance across the unparasitized treatment compared to the parasitized treatment. In 2011 seedling abundance in parasitized plots was 218, and 4.8 in unparasitized plots, and in 2012 seedling abundance in parasitized plots was 398 and 21.4 in unparasitized plots (estimated using prediction function). This further indicates that across years there was an increase in seedling abundance, and a higher magnitude of change in unparasitzied plots compared to unparasitized, but there was no significant interaction between our two predictors, treatment and year on seedling abundance.
+
+exp(0.6000) #effect of year onto level of our response
+exp(0.8956) #effect of interaction onto level of our response
+```
+
+Q2: Does thinning decrease the probability of tree mortality in wildfire?
+
+```{r glm}
+#2a) Fit a glm (using a probability distribution of your choice) that reflects the following (above) research question (including thinning as your only predictor and mortality as your response): 
+
+#thinning = x (binary), mortality = y (binary)
+
+#read in tree mortality data
+treemortality <- read.csv("treemortality.csv")
+#check data
+head(treemortality)
+
+#working with binary data, use binomial glm
+mod.binary <- glm(mortality~thinning, 
+                  data=treemortality, family="binomial")
+#interpret results
+summary(mod.binary)
+confint(mod.binary) #yes sig effect of tree thinning on tree mortality, different than zero
+
+#intercept is baseline tree mortality probablity when thinning is zero. This is approximately 1, but is on the log odds scale and we need to transform it outside of log odds scale.
+plogis(coef(mod.binary)["(Intercept)"]) 
+#intercept = 0.729, tree mortality when tree thinning is zero is 73%
+
+#use marginal effects package to interpret slope
+plot_predictions(mod.binary, condition="thinning") + #thinning = condition = x
+  ylab("Probability of tree mortality") + 
+  xlab("Thinning Treatment") +
+  theme_bw()
+#trees in thinned areas had a lower probability of mortality = .3 or 30% lower mortality, while trees in not thinned areas has a higher probability of mortality = .75 or 75%. 
+
+#instead of plotting, we can use prediction function to get these same exact values of probabilities of morality when there is and is not tree thinning
+print(predictions(mod.binary, 
+                     newdata = datagrid(thinning = 1),
+                     conf_level = 0.95))
+print(predictions(mod.binary, 
+                     newdata = datagrid(thinning = 0),
+                     conf_level = 0.95))
+
+#test model fit
+performance::rmse(mod.binary)
+#model fit is high, we get a value of 0.45 for rmse and we are only predicting 0 or 1, which means on average our probability predictions are off by 0.45 compared to our actual data.
+
+#Do forest thinning treatments reduce the probability of tree mortality? Interpret the results of the glm by writing 2-4 sentences about the biological significance of the effect of thinning, including descriptions of the sizes of the effect on the scale of the response variable, evidence for/against the hypothesis, and a metric of model fit.
+
+#Forest thinning treatments reduce the probability of tree mortality (p<2e-16, C.I = -2.13, -1.577). When no tree thinning occurs tree mortality is 73%, and the probablity of tree mortality decreases to 30% when tree thinning occurred. Our model fit is high rmse = 0.45, which may mean our model is not doing a great job at predicting our actual data, and there may be other variables we need to consider to get an unbiased estimate of thinning on tree morality.
+
+#2b) The researchers explicitly considered the potential for confounding relationships related to tree size in their design and randomized their post-fire sampling by tree size. Given this information, do the researchers need to incorporate tree size into their glm to accurately estimate the effect of thinning? Why or why not?
+#No, the researchers do not need to include tree size as a confounding variable in their model design. This is because they randomized their study, they ensured they were sampling for both thin and large trees and made sure to equally sample both. This removes any linkage between the predictor and response variable, and since they accounted for it in their study design they do not need to include it.
+
+#2c) Refit the model from 2a to include the necessary variables to minimize bias in our estimation of the “thinning” variable, based on the reviewer’s proposed DAG (above). Does the effect of “thinning” change? If so, describe the degree of change and why the two models may differ in their conclusions. If needed, modify your model interpretation from 2a.
+
+#perform new binomial glm to account for potential confounding variables: roaddist and slope
+mod.binary2 <- glm(mortality~thinning + roaddist + slope, 
+                  data=treemortality, family="binomial")
+
+summary(mod.binary2)
+confint(mod.binary2)
+
+#use marginal effects package to interpret slope
+plot_predictions(mod.binary2, condition="thinning") + #thinning = condition = x
+  ylab("Probability of tree mortality") + 
+  xlab("Thinning Treatment") +
+  theme_bw()
+
+#instead of plotting, we can use prediction function to get these same exact values of probabilities of morality when there is and is not tree thinning
+print(predictions(mod.binary2, 
+                     newdata = datagrid(thinning = 1),
+                     conf_level = 0.95))
+#31% mortality
+print(predictions(mod.binary2, 
+                     newdata = datagrid(thinning = 0),
+                     conf_level = 0.95))
+#53% mortality
+
+#Yes, the effect of our thinning treatment on mortality of trees did change once we added confounding variables: road distance and slope. There is a smaller effect of thinning on mortality of trees compared to our original model, but the results are still statistically significant (p = 5.3e-05, C.I. -1.36, -0.47). When accounting for confounding variables, tree thinning areas had 31% probability of mortality, and unthinned areas had a 53% probability of mortality. The estimate for probability of mortality of unthinned areas in our adjusted model is a lower value for mortality than our original model which was 73%, and there was a higher value of mortality in thinned areas (31%), the previous model had a 29% probability of mortality. This indicates that our confounding relationships due in fact affect tree mortality, and less of the effect on tree mortality is due to thinning treatment. Our two models differ because these confounding variables are used to provide a new and unbiased effect of thinning on tree mortality by accounting for some bias and confoundness in treemortality that is not only due to thinning treatment.
+
+```
+
+
