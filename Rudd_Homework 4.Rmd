@@ -200,9 +200,9 @@ print(predictions(mod.binary2,
 
 ## ASW: Wonderful! You've explained the key thing here -- slope and distance from roads are biasing the effect of thinning in the first model, making it appear more effective than it is because of the fact that thinning treatments are more likely to occur in locations where fire severity is already lower (closer to roads, on shallower slopes). The predicted effect of thinning in the first model is a decrease in mortality from 73% to 29%, but in the second model, this effect decreases (Mortality decreases from 54% to 29%). 
 
-## 18/20
+## 19/20
 
-## 47/50 - great job!! 
+## 48/50 - great job!! 
 
 ```
 
