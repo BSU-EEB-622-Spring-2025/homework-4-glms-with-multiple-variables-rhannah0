@@ -55,6 +55,8 @@ Calculate model fit using MAE
 #calculate model fit using mae
 performance::mae(mod.nbin)
 #we have a high value for mae:145.841, which tells us that on average our predicted values of seedling abundance are off by 145.841 units. This is high and likely indicates that our model is not doing a great job at fitting our data.
+
+## ASW: Right! Though the seedling values do range from 0 to >2000
 ```
 
 Q1b) Use visual (e.g. a marginal effects plot) and written (e.g. effect sizes on scale of response) approaches to interpret the results of your model.
@@ -105,9 +107,15 @@ predictions(mod.nbin2, newdata=data.frame(Treatment=c("parasitized", "unparasiti
 #Write ~2 new sentences that summarize the results of the new model and their biological implications:
 #There was not a significant interaction between seedling abundance in our two treatments across years (p=0.0599, C.I. = 0, 1.8). The p-value is very close to 0.05, and we assume no statistical significance, but there may be some biological relevance to our estimate. There was an increase in seedling abundance by approximately 1.822 times (exp(0.600)) across years, and our interaction indicates that across years there was a greater affect of year by 2.48 times (exp(0.89)) in seedling abundance across the unparasitized treatment compared to the parasitized treatment. In 2011 seedling abundance in parasitized plots was 218, and 4.8 in unparasitized plots, and in 2012 seedling abundance in parasitized plots was 398 and 21.4 in unparasitized plots (estimated using prediction function). This further indicates that across years there was an increase in seedling abundance, and a higher magnitude of change in unparasitzied plots compared to unparasitized, but there was no significant interaction between our two predictors, treatment and year on seedling abundance.
 
+## ASW: You might interpret the "greater effect of year" also as how the difference between unparasitized and parasitized trees differed between years.
+
 exp(0.6000) #effect of year onto level of our response
 exp(0.8956) #effect of interaction onto level of our response
+
+## ASW: exp(slope) does not put it onto the "level of the response" but rather tells you about proportional change (i.e. 2-fold increase...)
 ```
+
+## ASW: Nicely done! 29/30
 
 Q2: Does thinning decrease the probability of tree mortality in wildfire?
 
@@ -151,9 +159,13 @@ print(predictions(mod.binary,
 performance::rmse(mod.binary)
 #model fit is high, we get a value of 0.45 for rmse and we are only predicting 0 or 1, which means on average our probability predictions are off by 0.45 compared to our actual data.
 
+
+
 #Do forest thinning treatments reduce the probability of tree mortality? Interpret the results of the glm by writing 2-4 sentences about the biological significance of the effect of thinning, including descriptions of the sizes of the effect on the scale of the response variable, evidence for/against the hypothesis, and a metric of model fit.
 
 #Forest thinning treatments reduce the probability of tree mortality (p<2e-16, C.I = -2.13, -1.577). When no tree thinning occurs tree mortality is 73%, and the probablity of tree mortality decreases to 30% when tree thinning occurred. Our model fit is high rmse = 0.45, which may mean our model is not doing a great job at predicting our actual data, and there may be other variables we need to consider to get an unbiased estimate of thinning on tree morality.
+
+## ASW: ROC/AUC might be a better fit for this binomial model. Great interpretation otherwise!
 
 #2b) The researchers explicitly considered the potential for confounding relationships related to tree size in their design and randomized their post-fire sampling by tree size. Given this information, do the researchers need to incorporate tree size into their glm to accurately estimate the effect of thinning? Why or why not?
 #No, the researchers do not need to include tree size as a confounding variable in their model design. This is because they randomized their study, they ensured they were sampling for both thin and large trees and made sure to equally sample both. This removes any linkage between the predictor and response variable, and since they accounted for it in their study design they do not need to include it.
@@ -184,6 +196,13 @@ print(predictions(mod.binary2,
 #53% mortality
 
 #Yes, the effect of our thinning treatment on mortality of trees did change once we added confounding variables: road distance and slope. There is a smaller effect of thinning on mortality of trees compared to our original model, but the results are still statistically significant (p = 5.3e-05, C.I. -1.36, -0.47). When accounting for confounding variables, tree thinning areas had 31% probability of mortality, and unthinned areas had a 53% probability of mortality. The estimate for probability of mortality of unthinned areas in our adjusted model is a lower value for mortality than our original model which was 73%, and there was a higher value of mortality in thinned areas (31%), the previous model had a 29% probability of mortality. This indicates that our confounding relationships due in fact affect tree mortality, and less of the effect on tree mortality is due to thinning treatment. Our two models differ because these confounding variables are used to provide a new and unbiased effect of thinning on tree mortality by accounting for some bias and confoundness in treemortality that is not only due to thinning treatment.
+
+
+## ASW: Wonderful! You've explained the key thing here -- slope and distance from roads are biasing the effect of thinning in the first model, making it appear more effective than it is because of the fact that thinning treatments are more likely to occur in locations where fire severity is already lower (closer to roads, on shallower slopes). The predicted effect of thinning in the first model is a decrease in mortality from 73% to 29%, but in the second model, this effect decreases (Mortality decreases from 54% to 29%). 
+
+## 18/20
+
+## 47/50 - great job!! 
 
 ```
 
